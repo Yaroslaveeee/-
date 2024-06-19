@@ -1,0 +1,266 @@
+import pickle
+import tkinter as tk
+from tkinter import messagebox, simpledialog
+
+
+class Book:
+    def __init__(self, title, author, isbn):
+        self.title = title
+        self.author = author
+        self.isbn = isbn
+        self.is_borrowed = False
+
+    def __str__(self):
+        return f"'{self.title}' {self.author} (ISBN: {self.isbn})"
+
+
+class Member:
+    def __init__(self, name, member_id):
+        self.name = name
+        self.member_id = member_id
+        self.borrowed_books = []
+
+    def borrow_book(self, book):
+        if book.is_borrowed:
+            messagebox.showinfo("Информация", f"Извините, {book} уже взята.")
+        else:
+            book.is_borrowed = True
+            self.borrowed_books.append(book)
+            messagebox.showinfo("Информация", f"{self.name} взял(а) {book}.")
+
+    def return_book(self, book):
+        if book in self.borrowed_books:
+            book.is_borrowed = False
+            self.borrowed_books.remove(book)
+            messagebox.showinfo("Информация", f"{self.name} вернул(а) {book}.")
+        else:
+            messagebox.showinfo("Информация", f"{self.name} не брал(а) {book}.")
+
+    def __str__(self):
+        return f"Член: {self.name}, ID: {self.member_id}"
+
+
+class Library:
+    def __init__(self):
+        self.books = []
+        self.members = []
+
+    def add_book(self, book):
+        self.books.append(book)
+        messagebox.showinfo("Информация", f"Книга добавлена: {book}")
+
+    def register_member(self, member):
+        self.members.append(member)
+        messagebox.showinfo("Информация", f"Чл. библ. зарегистрирован: {member}")
+
+    def remove_member(self, member_id):
+        member = self.find_member_by_id(member_id)
+        if member:
+            self.members.remove(member)
+            messagebox.showinfo("Информация", f"Чл. библ. удалён: {member}")
+        else:
+            messagebox.showinfo("Информация", "Чл. библ. не найден")
+
+    def find_book_by_isbn(self, isbn):
+        for book in self.books:
+            if book.isbn == isbn:
+                return book
+        return None
+
+    def find_member_by_id(self, member_id):
+        for member in self.members:
+            if member.member_id == member_id:
+                return member
+        return None
+
+    def display_books(self):
+        books_info = "\n".join([f"{book} - {'Взята' if book.is_borrowed else 'Доступна'}" for book in self.books])
+        messagebox.showinfo("Доступные книги", books_info if books_info else "Нет доступных книг.")
+
+    def display_members(self):
+        members_info = "\n".join([str(member) for member in self.members])
+        messagebox.showinfo("Зарегистрированные чл. библ.",
+                            members_info if members_info else "Нет зарегистрированных чл. библ.")
+
+    def save_data(self, filename):
+        with open(filename, 'wb') as file:
+            pickle.dump(self, file)
+        messagebox.showinfo("Информация", "Данные библиотеки сохранены.")
+
+    @staticmethod
+    def load_data(filename):
+        try:
+            with open(filename, 'rb') as file:
+                library = pickle.load(file)
+            messagebox.showinfo("Информация", "Данные библиотеки загружены.")
+            return library
+        except FileNotFoundError:
+            messagebox.showinfo("Информация", "Сохранённые данные не найдены. Создаётся новая библиотека.")
+            return Library()
+
+
+class LibraryApp:
+    def __init__(self, root):
+        self.library = Library.load_data('library_data.pkl')
+        self.root = root
+        self.root.title("Система управления библиотекой")
+
+        self.create_widgets()
+
+    def create_widgets(self):
+        
+        main_frame = tk.Frame(self.root, padx=10, pady=10)
+        main_frame.pack(expand=True, fill=tk.BOTH)
+
+        
+        book_frame = tk.LabelFrame(main_frame, text="Добавить книгу", padx=10, pady=10)
+        book_frame.pack(side=tk.LEFT, fill="both", expand="yes", padx=10, pady=5)
+
+        tk.Label(book_frame, text="Название:").grid(row=0, column=0, padx=5, pady=5)
+        self.book_title_entry = tk.Entry(book_frame)
+        self.book_title_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(book_frame, text="Автор:").grid(row=1, column=0, padx=5, pady=5)
+        self.book_author_entry = tk.Entry(book_frame)
+        self.book_author_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        tk.Label(book_frame, text="ISBN:").grid(row=2, column=0, padx=5, pady=5)
+        self.book_isbn_entry = tk.Entry(book_frame)
+        self.book_isbn_entry.grid(row=2, column=1, padx=5, pady=5)
+
+        tk.Button(book_frame, text="Добавить книгу", command=self.add_book).grid(row=3, columnspan=2, pady=10)
+
+        
+        member_frame = tk.LabelFrame(main_frame, text="Зарегистрировать чл. библ.", padx=10, pady=10)
+        member_frame.pack(side=tk.LEFT, fill="both", expand="yes", padx=10, pady=5)
+
+        tk.Label(member_frame, text="Имя:").grid(row=0, column=0, padx=5, pady=5)
+        self.member_name_entry = tk.Entry(member_frame)
+        self.member_name_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(member_frame, text="ID члена:").grid(row=1, column=0, padx=5, pady=5)
+        self.member_id_entry = tk.Entry(member_frame)
+        self.member_id_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        tk.Button(member_frame, text="Зарегистрировать чл. библ.", command=self.register_member).grid(row=2, columnspan=2,
+                                                                                                  pady=10)
+        tk.Button(member_frame, text="Удалить чл. библ.", command=self.remove_member).grid(row=3, columnspan=2, pady=10)
+
+        
+        borrow_frame = tk.LabelFrame(main_frame, text="Взять книгу", padx=10, pady=10)
+        borrow_frame.pack(side=tk.LEFT, fill="both", expand="yes", padx=10, pady=5)
+
+        tk.Label(borrow_frame, text="ID чл. библ.:").grid(row=0, column=0, padx=5, pady=5)
+        self.borrow_member_id_entry = tk.Entry(borrow_frame)
+        self.borrow_member_id_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(borrow_frame, text="ISBN книги:").grid(row=1, column=0, padx=5, pady=5)
+        self.borrow_book_isbn_entry = tk.Entry(borrow_frame)
+        self.borrow_book_isbn_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        tk.Button(borrow_frame, text="Взять книгу", command=self.borrow_book).grid(row=2, columnspan=2, pady=10)
+
+        
+        return_frame = tk.LabelFrame(main_frame, text="Вернуть книгу", padx=10, pady=10)
+        return_frame.pack(side=tk.LEFT, fill="both", expand="yes", padx=10, pady=5)
+
+        tk.Label(return_frame, text="ID чл. библ.:").grid(row=0, column=0, padx=5, pady=5)
+        self.return_member_id_entry = tk.Entry(return_frame)
+        self.return_member_id_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(return_frame, text="ISBN книги:").grid(row=1, column=0, padx=5, pady=5)
+        self.return_book_isbn_entry = tk.Entry(return_frame)
+        self.return_book_isbn_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        tk.Button(return_frame, text="Вернуть книгу", command=self.return_book).grid(row=2, columnspan=2, pady=10)
+
+        
+        display_frame = tk.LabelFrame(main_frame, text="Отображение информации", padx=10, pady=10)
+        display_frame.pack(side=tk.LEFT, fill="both", expand="yes", padx=10, pady=5)
+
+        tk.Button(display_frame, text="Показать книги", command=self.library.display_books).pack(pady=5)
+        tk.Button(display_frame, text="Показать чл. библ.", command=self.library.display_members).pack(pady=5)
+
+        
+        tk.Button(main_frame, text="Сохранить и выйти", command=self.save_and_exit).pack(side=tk.BOTTOM, pady=10)
+
+    def add_book(self):
+        title = self.book_title_entry.get()
+        author = self.book_author_entry.get()
+        isbn = self.book_isbn_entry.get()
+        if title and author and isbn:
+            book = Book(title, author, isbn)
+            self.library.add_book(book)
+            self.book_title_entry.delete(0, tk.END)
+            self.book_author_entry.delete(0, tk.END)
+            self.book_isbn_entry.delete(0, tk.END)
+        else:
+            messagebox.showinfo("Информация", "Пожалуйста, заполните все поля.")
+
+
+
+    def register_member(self):
+        name = self.member_name_entry.get()
+        member_id = self.member_id_entry.get()
+        if name and member_id:
+            member = Member(name, member_id)
+            self.library.register_member(member)
+            self.member_name_entry.delete(0, tk.END)
+            self.member_id_entry.delete(0, tk.END)
+        else:
+            messagebox.showinfo("Информация", "Пожалуйста, заполните все поля.")
+
+
+    def remove_member(self):
+        member_id = self.member_id_entry.get()
+        if member_id:
+            self.library.remove_member(member_id)
+            self.member_id_entry.delete(0, tk.END)
+        else:
+            messagebox.showinfo("Информация", "Пожалуйста, введите ID чл. библ. для удаления.")
+
+
+    def borrow_book(self):
+        member_id = self.borrow_member_id_entry.get()
+        isbn = self.borrow_book_isbn_entry.get()
+        if member_id and isbn:
+            member = self.library.find_member_by_id(member_id)
+            book = self.library.find_book_by_isbn(isbn)
+            if member and book:
+                member.borrow_book(book)
+                self.borrow_member_id_entry.delete(0, tk.END)
+                self.borrow_book_isbn_entry.delete(0, tk.END)
+            else:
+                messagebox.showinfo("Информация", "Чл. библ. или книга не найдены.")
+        else:
+            messagebox.showinfo("Информация", "Пожалуйста, заполните все поля.")
+
+
+    def return_book(self):
+        member_id = self.return_member_id_entry.get()
+        isbn = self.return_book_isbn_entry.get()
+        if member_id and isbn:
+            member = self.library.find_member_by_id(member_id)
+            book = self.library.find_book_by_isbn(isbn)
+            if member and book:
+                member.return_book(book)
+                self.return_member_id_entry.delete(0, tk.END)
+                self.return_book_isbn_entry.delete(0, tk.END)
+            else:
+                messagebox.showinfo("Информация", "Чл. библ. или книга не найдены.")
+        else:
+            messagebox.showinfo("Информация", "Пожалуйста, заполните все поля.")
+
+
+    def save_and_exit(self):
+        self.library.save_data('library_data.pkl')
+        self.root.quit()
+
+
+def main():
+    root = tk.Tk()
+    app = LibraryApp(root)
+    root.mainloop()
+
+if __name__ == '__main__':
+    main()
